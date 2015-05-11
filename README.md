@@ -1,2 +1,4 @@
 # How-to-Bait-a-Hook-with-Dirt
-A Study of the Writing in Celebrity Gossip Blogs and its Implications on Society's Perception of the Famous
+## A Study of the Writing in Celebrity Gossip Blogs and its Implications on Society's Perception of the Famous
+
+This project looks at differences in the portrayal of male and female celebrities on the popular celebrity gossip blog, *Perezhilton.com*.  I use text mining strategies with results displayed in word clouds to emphasize the stark contrasts in langugage use between blog posts centered around male and female celebrities.  I specifically look at verb use frequencies, passive and active tenses of verbs, and the connotations of commonly-used verbs with otherwise similar denotations.    
