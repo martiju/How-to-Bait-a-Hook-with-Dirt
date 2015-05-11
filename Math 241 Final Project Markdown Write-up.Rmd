@@ -1,0 +1,233 @@
+How to Bait a Hook with Dirt: A Study of the Writing in Celebrity Gossip Blogs and its Reflections on Our Society's Perception of Those in the Spotlight
+========================================================
+```{r, echo=FALSE}
+suppressPackageStartupMessages(library(tables))
+suppressPackageStartupMessages(library(SnowballC))
+suppressPackageStartupMessages(library(wordcloud))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(plyr))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(tm))
+suppressPackageStartupMessages(library(xtable))
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(rgdal))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(lubridate))
+
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+
+clean.text <- function(text){
+  text <- gsub("[^[:alnum:]]", " ", text)
+  text <- gsub("http\\w+", "", text)
+  text <- gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", text)
+  text <- gsub("[[:punct:]]", "", text)
+  text <- gsub("[[:digit:]]", "", text)
+  text = gsub("^\\s+|\\s+$", "", text)
+  text <- tolower(text)
+  return(text)
+}
+celebritydata <- read.csv("math 241 final project data.csv", header=TRUE) %>% tbl_df() %>% mutate(
+  Gender=trim(Gender), 
+  Gender=as.factor(Gender), 
+  Active.role=as.factor(Active.role),
+  Career.related=as.factor(Career.related),
+  Headline=clean.text(Headline), 
+  Main.Verbs=clean.text(Main.Verbs))
+
+#Adjusting dates accordingly
+celebritydata$Date <- strptime(celebritydata$Date, format="%m.%d.%y")
+celebritydata$Date <- ymd(celebritydata$Date) - years(5)
+```
+
+```{r, echo=FALSE}
+celebrity.stopwords <- c(stopwords("english"))
+
+celebrity.vector <- Corpus(VectorSource(celebritydata$Headline))
+#error here...
+celebrity.vector <- tm_map(celebrity.vector, stemDocument, mc.cores=1)
+celebrity.vector <- tm_map(celebrity.vector, removeWords, celebrity.stopwords)
+
+celebrity.tdm = TermDocumentMatrix(celebrity.vector, control = list(wordLengths=c(4, 100)))
+celebrity.m = as.matrix(celebrity.tdm)
+
+#Female
+celebrity.fem <- celebritydata$Headline[which(celebritydata$Gender=="f")]
+
+celebrity.vector.f <- Corpus(VectorSource(celebrity.fem))
+celebrity.vector.f <- tm_map(celebrity.vector.f, stemDocument, mc.cores=1)
+celebrity.vector.f <- tm_map(celebrity.vector.f, removeWords, celebrity.stopwords)
+
+celebrity.tdm.f = TermDocumentMatrix(celebrity.vector.f, control = list(wordLengths=c(3, Inf)))
+celebrity.m.f = as.matrix(celebrity.tdm.f)
+
+celebrity.word_freqs.f = sort(rowSums(celebrity.m.f), decreasing = TRUE) 
+celebrity.dm.f = data.frame(word = names(celebrity.word_freqs.f), freq = celebrity.word_freqs.f)
+
+celebrity.word_freqs = sort(rowSums(celebrity.m), decreasing = TRUE) 
+celebrity.dm = data.frame(word = names(celebrity.word_freqs), freq = celebrity.word_freqs)
+
+#Male
+celebrity.male <- celebritydata$Headline[which(celebritydata$Gender=="m")]
+
+celebrity.vector.m <- Corpus(VectorSource(celebrity.male))
+celebrity.vector.m <- tm_map(celebrity.vector.m, stemDocument, mc.cores=1)
+celebrity.vector.m <- tm_map(celebrity.vector.m, removeWords, celebrity.stopwords)
+
+celebrity.tdm.m = TermDocumentMatrix(celebrity.vector.m, control = list(wordLengths=c(3, Inf)))
+celebrity.m.m = as.matrix(celebrity.tdm.m)
+
+celebrity.word_freqs.m = sort(rowSums(celebrity.m.m), decreasing = TRUE) 
+celebrity.dm.m = data.frame(word = names(celebrity.word_freqs.m), freq = celebrity.word_freqs.m)
+
+#Verbs and Female
+celebrity.stopwords <- c(stopwords("english"))
+
+celebrityverbs.fem <- celebritydata$Main.Verbs[which(celebritydata$Gender=="f")]
+
+celebrityverb.vector.f <- Corpus(VectorSource(celebrityverbs.fem))
+celebrityverb.vector.f <- tm_map(celebrityverb.vector.f, stemDocument, mc.cores=1)
+celebrityverb.vector.f <- tm_map(celebrityverb.vector.f, removeWords, celebrity.stopwords)
+
+celebrityverb.tdm.f = TermDocumentMatrix(celebrityverb.vector.f, control = list(wordLengths=c(1, Inf)))
+celebrityverb.m.f = as.matrix(celebrityverb.tdm.f)
+
+#Data frame of wordcounts 
+celebrityverb.word_freqs.f = sort(rowSums(celebrityverb.m.f), decreasing = TRUE) 
+celebrityverb.dm.f = data.frame(word = names(celebrityverb.word_freqs.f), freq = celebrityverb.word_freqs.f)
+
+#Verbs and Male
+celebrityverbs.male <- celebritydata$Main.Verbs[which(celebritydata$Gender=="m")]
+
+celebrityverb.vector.m <- Corpus(VectorSource(celebrityverbs.male))
+celebrityverb.vector.m <- tm_map(celebrityverb.vector.m, stemDocument, mc.cores=1)
+celebrityverb.vector.m <- tm_map(celebrityverb.vector.m, removeWords, celebrity.stopwords)
+
+celebrityverb.tdm.m = TermDocumentMatrix(celebrityverb.vector.m, control = list(wordLengths=c(1, Inf)))
+celebrityverb.m.m = as.matrix(celebrityverb.tdm.m)
+
+#Data frame of wordcounts 
+celebrityverb.word_freqs.m = sort(rowSums(celebrityverb.m.m), decreasing = TRUE) 
+celebrityverb.dm.m = data.frame(word = names(celebrityverb.word_freqs.m), freq = celebrityverb.word_freqs.m)
+```
+
+## Introduction
+
+```{r, echo=FALSE}
+attach(celebritydata)
+par(mfrow=c(1,2)) 
+wordcloud(celebrityverb.dm.m$word, celebrityverb.dm.m$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=2)
+titlem <- paste("Most Used Verb\n in Male-Centered\n Headlines")
+title(titlem)
+wordcloud(celebrityverb.dm.f$word, celebrityverb.dm.f$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=2)
+titlef <- paste("Most Used Verb\n in Female-Centered\n Headlines")
+title(titlef)
+```
+### A Male-Centered Headline: "Jay Z And His Posse Make Waves Celebrating The Launch Of Tidal!! Check Out The Details Of His New Music And Video Streaming Service!"
+
+### A Female-Centered Headline: "Naya Rivera Shows Off Her Baby Bump With Husband Ryan Dorsey! It's So Cute!"
+
+Make vs. show, leave vs. get.  The connotations of these verbs represent a stark contrast between the ways that male and female celebrities are portrayed in the media.  Even though celebrity gossip blogs like Perezhilton.com generally cater towards a female-centered readership, such blogs still tend to focus on the physical appearances of women and the careers of men.  But in 2015, when more women than ever are enrolled in college, how do these gender stereotypes from centuries ago thrive in the context of celebrity gossip? This report picks apart the linguistics variances in the wording of blog posts from Perezhilton.com, a popular celebrity gossip site in an attempt to discover what portrayals of celebrities make these blog posts 'catchy', and what makes celebrity gossip so so interesting, despite clearly perpetuating tired gender stereotypes.  In her dissertation, 'Just like Us: Celebrity Gossip Magazines in American Popular Culture', Andrea McDonnell references a powerful quote by Susan Douglas about the contradictory yet coexisting reactions to celebrity gossip held by women across America:
+
+"When I open Vogue, for example, I am simultaneously infuriated and seduced, grateful to escape temporarily into a narcissistic paradise where I’m the center of the universe, outraged that completely unobtainable standards of wealth and beauty exclude me and most women I know from the promised land. I adore the materialism; I despise the materialism. I yearn for self-indulgence; I think the self-indulgence is repellent. I want to look beautiful; I think wanting to look beautiful is about the most dumb-ass goal you could have. The magazine stokes my desire; that magazine triggers my bile. And this doesn’t only happen when I’m reading Vogue; it happens all the time…On the one hand, on the other hand that’s not just me- that’s what it means to be a woman in America (1994: 9)."
+
+This report will break down interesting linguistic differences between male and female-centered headlines to answer the question: **what is celebrity gossip telling us, and why do we listen?** 
+
+
+## Data Collection Methods
+
+#### First, I will start with the methods of gathering the data themselves.  I chose to start recording data from blog posts dated March 30th, 2015 and earlier.  I chose to record seven variables for each observation of a blog post title I recorded: 
+
+**Headline** - the plain text of the blog post title, later stripped of all punctuation, unnecessary spaces, and capitalizations using the ‘*clean.text*’ function given to students in class by Albert Kim.
+
+**Main.Verbs** – the manually recorded verbs in each title.  I took the ‘root’ form of the verb (i.e. ‘make’ instead of ‘made’) so that frequency tables of verb usage would be more accurate.  For verbs used in the passive voice (“Celebrity X gets dumped again!”, for example), I include both the verb ‘get’ and the verb ‘dump’.  The text mining commands I use in this report will therefore treat these as separate verbs, even though the addition of ‘get’ merely shows that the main verb is in the passive form.  I decided to allow this interpretation so that I could treat the passive formation of a verb as a separate entity, and therefore also analyze the extent to which passive verbs were used in male as opposed to female-centered headlines.  Alternative ways of dealing with the passive voice will be addressed in the Alternative Methods section of this report.
+
+**Gender** – the gender of the celebrity mentioned in the title, not necessarily the grammatical subject. For example, for a blog post about Britney Spears’ husband, I would still take the gender of Britney Spears.  
+  I recorded this variable according to these specifications because while the subject of the post is technically male, the celebrity used to draw readers to the post (in this case, Britney Spears) is female.  I developed this methodology of choosing the subject’s gender with the assumption that if the writer thought that people would be equally interested in gossip about Britney Spears’ husband (for example) if he were not at all associated with Britney Spears, the writer would have instead used the husband’s name instead of referring him as the husband of a famous celebrity.   In this way, I am able to analyze the way celebrities and those in their social or familial circles are portrayed according to the gender of the celebrity.  
+  		If multiple celebrities are mentioned in one title, I take the gender of the celebrity whose name is mentioned first.  I decided to do this with the assumption that the writer would choose to order their mention of celebrities according to the celebrity’s ‘catchiness’ in attempt to ‘hook’ the reader.  I will explore alternatives to this method of dealing with the mention of multiple celebrities in the Alternative Methods section of this report.  
+
+**Active.role** – a dummy variable for whether the celebrity (the celebrity whose gender is used for the *Gender* variable) is playing an active (*Active.role* = 1) or passive (*Active.role* = 0) role in the title.  I do not include ‘to be’ as an active verb.  After observing many occurrences of verbs like ‘display’, ‘show’, and ‘wear’ in the context of appearances (“Celebrity X shows newly toned figure!”, for example), I decided to not consider these verbs evidence of a celebrity playing an active role, even if the celebrity is the subject of the title.  Admittedly, this is a judgment call on my part, and this decision can definitely be debated further.  A discussion of these ‘pseudo-active’ verbs, as I refer to them, will appear in my conclusions.  
+		I also decided not to consider the celebrity playing an active role in the title if they are the subject of a sentence whose main verb is a passive verb (“Celebrity Y gets dumped again!”, for example).  My justification for this decision is based on the passive and active forms of verbs: a celebrity who is having the main verb(s) ‘done’ to them is not playing an active role in the title.    
+
+**Career.related** – a dummy variable for whether the topic of the post as defined by the title seems to be related (*Career.related* = 1) or unrelated (*Career.related* = 0) to the main celebrity’s (as defined by the *Gender* variable) career.   
+
+**Number of Facebook Likes** - the number of Facebook likes a particular post has at the time of recording.  To minimize the changing number of Facebook likes being significantly dependent on when the data were collected, I decided to collect data from posts that were sufficiently old such that it would be unlikely that other Facebook users would visit these posts and ‘like’ them, which would result in a change in the number of Facebook likes.  Considering that as of early May 2015, posts in late March appeared on pages 350 and earlier, it seems that posts in late March were sufficiently old such that the number of Facebook likes would no longer change dramatically.    
+
+**Date** - the date that the post was made available online.
+
+So ideally, we would like to look at a large enough dataset such that we would see interesting trends in the words used in general.  However, since we have only slightly more than 350 observations for analysis available, we can see that the most frequently used words in this dataset are very dependent on the dates of the blog posts.  
+
+```{r, echo=FALSE}
+#WordCloud output
+n_interesting=10
+title <- paste("Top", n_interesting, "Most Frequently Used Words\n in All Headlines")
+wordcloud(celebrity.dm$word, celebrity.dm$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=n_interesting)
+title(title)
+
+attach(celebritydata)
+par(mfrow=c(1,2)) 
+wordcloud(celebrity.dm.m$word, celebrity.dm.m$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=n_interesting)
+titlem <- paste("Top", n_interesting, "Most Used Words\n in Male-Centered\n Headlines")
+title(titlem)
+wordcloud(celebrity.dm.f$word, celebrity.dm.f$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=n_interesting)
+titlef <- paste("Top", n_interesting, "Most Used Words\n in Female-Centered\n Headlines")
+title(titlef)
+
+#Male and Female Worldclouds where Min Word Freq=3
+n_freq=3
+attach(celebritydata)
+par(mfrow=c(1,2)) 
+titlefreqf <- paste("Verbs that Appear at Least", n_freq, "Times\n in Female-Centered Titles")
+wordcloud(celebrityverb.dm.f$word, celebrityverb.dm.f$freq, min.freq=3, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+title(titlefreqf)
+titlefreqm <- paste("Verbs that Appear at Least", n_freq, "Times\n in Male-Centered Titles")
+wordcloud(celebrityverb.dm.m$word, celebrityverb.dm.m$freq, min.freq=n_freq, scale=c(5, .1), colors=brewer.pal(6, "Dark2"))
+title(titlefreqm)
+
+```
+
+
+In late March (when these data were first posted by Perezhilton.com), Zayn Malik left the popular boy band One Direction, causing a flood of gossip posts on the topic.  Therefore, there is no surprise that the words "zayn" and "malik" are among the top 10 most frequently used words.   
+
+So with this small number of observations, if I were to focus this analysis on the most frequently used words, my graphics would be very susceptible to time-specific trending gossip.  The presence of the words 'zayn', 'malik', 'one', and 'direection' in these wordclouds represents a sort of skew in the dataset.  
+
+Also, since the goal of this project is to get an overall picture of the different uses of language according to the gender of the celebrity, proper nouns will not be very useful here.  So for these reasons, I decided to focus just on the verbs in the headlines in my dataset.  I have explained my methodology for recording these verbs    
+
+So, in order to minimize the biases of particularly popular stories during the chosen period of time, I chose to focus on verbs instead.        
+Admittedly, isolating my dataset to only the main verbs in these titles doesn't rid my data of its One Direction-related biases: the verb 'leave' is still among the most frequently used verbs for male-centered headlines, likely for that very reason.  However, by looking at only verbs, we can look at the writers' word choices more critically.  While a writer has little choice in stating a celebrity's name, seeing why the writer chooses one verb over another when the denotations appear to be the same provides some interesting results.
+
+
+```{r, echo=FALSE}
+#Most Frequently Used Verbs in Female-Centered Titles
+n_interesting=10
+
+attach(celebritydata)
+par(mfrow=c(1,2)) 
+title <- paste("Top", n_interesting, "Most Used Verbs\n in Female-Centered Titles")
+wordcloud(celebrityverb.dm.f$word, celebrityverb.dm.f$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=n_interesting)
+title(title)
+title <- paste("Top", n_interesting, "Most Used Verbs\n in Male-Centered Titles")
+wordcloud(celebrityverb.dm.m$word, celebrityverb.dm.m$freq, random.order = FALSE, colors = brewer.pal(8, "Dark2"), max.words=n_interesting)
+title(title)
+
+paste("Frequency Table of Top", n_interesting, "Verbs in Male and Female-Centered Headlines")
+
+tablef <- head(celebrityverb.dm.f[1:n_interesting, ])
+tablem <- head(celebrityverb.dm.m[1:n_interesting, ])
+
+Female <- kable(head(celebrityverb.dm.f[1:n_interesting, ]), row.names=FALSE, format="markdown",  padding=3, booktabs=TRUE)
+Male <- kable(head(celebrityverb.dm.m[1:n_interesting, ]), row.names=FALSE, format="markdown",  padding=3, booktabs=TRUE)
+
+cbind(Female, Male)
+```
+
+
+The fact that the verb 'show' is one of the most frequently used in female-centered headlines represents an interesting phenomenom.  In most of the contexts of these headlines, verbs like 'show', 'display', and 'reveal' are used in the context of a woman's body, hair, clothes, and accessories.  In fact, these verbs were used so frequently in place of the more natural verb choices, 'wear' or even 'is' in these contexts that I refused to count them as 'active' verbs since in reality, the subject wasn't actively doing much except allowing her or himself to be looked at by others.  
+
+But if words like 'show', 'display', and 'reveal' were being used so frequently, there must be some underlying reason, some explanation for why these words made a title so 'catchy'.  Andrea McDonnell points to second wave feminists, whose rallying cry was "the personal is political", hoping to force issues that had originially only existed in the private sphere into the public spotlight.  And in a way, celebrity gossip does this, and more.  McDonnell points out that insecurities and issues that weren't deemed worthy of mainstream new sources got a voice in celebrity gossip, where women could talk about 'private' issues while distancing themselves from the topics by instead discussing these issues in the context of a celebrity.  
+
+But not only did celebrity gossip bring 'private' issues into the spotlight, it also brought public figures closer to the reader.  As we can see, words like 'show', 'reveal', 'admit', and 'display' have a kind of intimate connotation, as if the celebrity is really give you a personal peek into his or her private life.  Of course, this is misleading.  Almost all posts about a celebrity's appearance include pictures similar to one of a disgruntled celebrity being interrupted on her morning coffee run, which clearly doesn't imply a willingness of that celebrity to confide in the reader.  Or on the opposite extreme, the celebrity poses in front of tens of cameras, whose pictures will be all over the internet in just seconds.  But these intimate-sounding verbs still provide a personal, special narrative that seems to be told just to you (as well as anyone else in the world who has internet access and is interested).
+
+
+## Bibliography
+1. McDonnell, Andrea M. Just Like Us: Celebrity Gossip Magazines in American Popular Culture. Diss. U of Michigan, 2012.
